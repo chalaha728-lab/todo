@@ -1,0 +1,8 @@
+project_type: Flutter (Android)
+framework: flutter
+platform: Android
+project_category: Mobile App
+created_at: 2026-07-22T02:03:32.956Z
+
+about:
+todo app
