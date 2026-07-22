@@ -1,50 +1,44 @@
-// Placeholder. Will be overwritten by CodeSage AI code generation.
 import 'package:flutter/material.dart';
 
+import 'screens/home_screen.dart';
+
 void main() {
-  runApp(const CodeSageApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const TodoApp());
 }
 
-class CodeSageApp extends StatelessWidget {
-  const CodeSageApp({super.key});
+class TodoApp extends StatelessWidget {
+  const TodoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'CodeSage App',
-      theme: ThemeData(colorSchemeSeed: Colors.blue, useMaterial3: true),
-      home: const HomePage(),
-    );
-  }
-}
-
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  int _counter = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('CodeSage App')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('Waiting for AI-generated content...'),
-            Text('$_counter', style: Theme.of(context).textTheme.headlineMedium),
-          ],
+      title: 'My Todos',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2F6FED),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(centerTitle: false),
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => setState(() => _counter++),
-        child: const Icon(Icons.add),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2F6FED),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(centerTitle: false),
+        inputDecorationTheme: const InputDecorationTheme(
+          filled: true,
+        ),
       ),
+      themeMode: ThemeMode.system,
+      home: const HomeScreen(),
     );
   }
 }
