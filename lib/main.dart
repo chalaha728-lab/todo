@@ -8,6 +8,7 @@ void main() {
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
     ),
   );
   runApp(const TodoApp());
@@ -16,7 +17,7 @@ void main() {
 class TodoApp extends StatelessWidget {
   const TodoApp({super.key});
 
-  static const _seed = Color(0xFF5B6CFF);
+  static const _seed = Color(0xFF0D9488);
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +42,7 @@ class TodoApp extends StatelessWidget {
       colorScheme: colorScheme,
       useMaterial3: true,
       scaffoldBackgroundColor:
-          isDark ? const Color(0xFF0F1117) : const Color(0xFFF4F6FB),
+          isDark ? const Color(0xFF0B1220) : const Color(0xFFF0FDFA),
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
@@ -51,40 +52,40 @@ class TodoApp extends StatelessWidget {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+        color: isDark ? const Color(0xFF152033) : Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
         ),
         margin: EdgeInsets.zero,
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        elevation: 4,
-        highlightElevation: 8,
+        elevation: 6,
+        highlightElevation: 10,
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isDark
-            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.4)
-            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.35)
+            : const Color(0xFFCCFBF1).withValues(alpha: 0.45),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.6),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: colorScheme.error),
         ),
         contentPadding:
@@ -92,19 +93,19 @@ class TodoApp extends StatelessWidget {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         showDragHandle: true,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 22),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),

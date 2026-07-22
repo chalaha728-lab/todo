@@ -66,6 +66,34 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good evening';
   }
 
+  String get _todayLabel {
+    final now = DateTime.now();
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
+  }
+
   Future<void> _showTodoEditor({Todo? existing}) async {
     final titleController = TextEditingController(text: existing?.title ?? '');
     final notesController = TextEditingController(text: existing?.notes ?? '');
@@ -94,36 +122,60 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          colors: [
+                            colorScheme.primary,
+                            colorScheme.tertiary,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
                         isEditing
                             ? Icons.edit_rounded
                             : Icons.add_task_rounded,
-                        color: colorScheme.onPrimaryContainer,
+                        color: colorScheme.onPrimary,
                         size: 22,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      isEditing ? 'Edit task' : 'New task',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isEditing ? 'Edit task' : 'New task',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
                           ),
+                          Text(
+                            isEditing
+                                ? 'Update the details below'
+                                : 'What would you like to do?',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
                 TextFormField(
                   controller: titleController,
                   autofocus: true,
                   textCapitalization: TextCapitalization.sentences,
                   decoration: const InputDecoration(
                     labelText: 'Title',
-                    hintText: 'What needs to be done?',
+                    hintText: 'e.g. Buy groceries',
                     prefixIcon: Icon(Icons.title_rounded),
                   ),
                   validator: (value) {
@@ -132,11 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     }
                     return null;
                   },
-                  onFieldSubmitted: (_) {
-                    if (formKey.currentState?.validate() ?? false) {
-                      Navigator.pop(context, true);
-                    }
-                  },
+                  textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
@@ -145,23 +193,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   maxLines: 3,
                   decoration: const InputDecoration(
                     labelText: 'Notes (optional)',
-                    hintText: 'Add a little more detail...',
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.only(bottom: 40),
-                      child: Icon(Icons.notes_rounded),
-                    ),
+                    hintText: 'Add a little detail…',
+                    prefixIcon: Icon(Icons.notes_rounded),
                     alignLabelWithHint: true,
                   ),
                 ),
                 const SizedBox(height: 22),
                 FilledButton.icon(
                   onPressed: () {
-                    if (formKey.currentState?.validate() ?? false) {
-                      Navigator.pop(context, true);
-                    }
+                    if (formKey.currentState?.validate() != true) return;
+                    Navigator.of(context).pop(true);
                   },
-                  icon: Icon(isEditing ? Icons.save_outlined : Icons.add),
-                  label: Text(isEditing ? 'Save' : 'Add task'),
+                  icon: Icon(
+                    isEditing ? Icons.check_rounded : Icons.add_rounded,
+                  ),
+                  label: Text(isEditing ? 'Save changes' : 'Add task'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
                 ),
               ],
             ),
@@ -170,16 +221,12 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    if (result != true) {
-      titleController.dispose();
-      notesController.dispose();
-      return;
-    }
-
     final title = titleController.text.trim();
     final notes = notesController.text.trim();
     titleController.dispose();
     notesController.dispose();
+
+    if (result != true || !mounted) return;
 
     setState(() {
       if (isEditing) {
@@ -212,9 +259,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _deleteTodo(Todo todo) async {
-    setState(() {
-      _todos.removeWhere((t) => t.id == todo.id);
-    });
+    final index = _todos.indexWhere((t) => t.id == todo.id);
+    if (index == -1) return;
+
+    setState(() => _todos.removeAt(index));
     await _persist();
 
     if (!mounted) return;
@@ -225,8 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () async {
-            setState(() => _todos.add(todo));
-            _todos.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            setState(() => _todos.insert(index.clamp(0, _todos.length), todo));
             await _persist();
           },
         ),
@@ -238,16 +285,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final removed = _todos.where((t) => t.isDone).toList();
     if (removed.isEmpty) return;
 
-    setState(() {
-      _todos.removeWhere((t) => t.isDone);
-    });
+    setState(() => _todos.removeWhere((t) => t.isDone));
     await _persist();
 
     if (!mounted) return;
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Cleared ${removed.length} completed task${removed.length == 1 ? '' : 's'}',
+        content: Text('Cleared ${removed.length} completed task(s)'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            setState(() => _todos.addAll(removed));
+            await _persist();
+          },
         ),
       ),
     );
@@ -257,7 +308,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final visible = _visibleTodos;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: _loading
@@ -266,8 +316,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   SizedBox(
-                    width: 40,
-                    height: 40,
+                    width: 48,
+                    height: 48,
                     child: CircularProgressIndicator(
                       strokeWidth: 3,
                       color: colorScheme.primary,
@@ -275,120 +325,134 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Loading tasks...',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                    'Loading tasks…',
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
                   ),
                 ],
               ),
             )
-          : CustomScrollView(
-              slivers: [
-                Sli
-verToBoxAdapter(
-                  child: _HeaderBanner(
-                    greeting: _greeting,
-                    activeCount: _activeCount,
-                    completedCount: _completedCount,
-                    totalCount: _todos.length,
-                    progress: _progress,
-                    showClear: _completedCount > 0,
-                    onClear: _clearCompleted,
-                    isDark: isDark,
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                    child: _FilterChips(
-                      filter: _filter,
-                      allCount: _todos.length,
-                      activeCount: _activeCount,
-                      completedCount: _completedCount,
-                      onChanged: (f) => setState(() => _filter = f),
+          : SafeArea(
+              bottom: false,
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(child: _buildHeroHeader(colorScheme)),
+                  if (_todos.isNotEmpty)
+                    const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                  if (_todos.isNotEmpty)
+                    SliverToBoxAdapter(child: _buildFilterBar(colorScheme)),
+                  if (_completedCount > 0 && _filter != TodoFilter.active)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: _clearCompleted,
+                            icon: const Icon(Icons.cleaning_services_outlined,
+                                size: 18),
+                            label: const Text('Clear completed'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: colorScheme.error,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                if (visible.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _EmptyState(filter: _filter),
-                  )
-                else
-                  Sli
-verPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-                    sliver: SliverList.separated(
-                      itemCount: visible.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (context, index) {
-                        final todo = visible[index];
-                        return _TodoTile(
-                          todo: todo,
-                          onToggle: () => _toggleDone(todo),
-                          onEdit: () => _showTodoEditor(existing: todo),
-                          onDelete: () => _deleteTodo(todo),
-                        );
-                      },
-                    ),
-                  ),
-              ],
+                  if (visible.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _EmptyState(filter: _filter),
+                    )
+                  else
+                    ...[
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        sliver: SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                              left: 4,
+                              bottom: 10,
+                              top: 4,
+                            ),
+                            child: Text(
+                              _filterLabel,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.3,
+                                  ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverPadding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                        sliver: SliverList.separated(
+                          itemCount: visible.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final todo = visible[index];
+                            return _TodoCard(
+                              todo: todo,
+                              onToggle: () => _toggleDone(todo),
+                              onEdit: () => _showTodoEditor(existing: todo),
+                              onDelete: () => _deleteTodo(todo),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                ],
+              ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showTodoEditor(),
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add task'),
-      ),
+      floatingActionButton: _loading
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _showTodoEditor(),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add task'),
+            ),
     );
   }
-}
 
-class _HeaderBanner extends StatelessWidget {
-  const _HeaderBanner({
-    required this.greeting,
-    required this.activeCount,
-    required this.completedCount,
-    required this.totalCount,
-    required this.progress,
-    required this.showClear,
-    required this.onClear,
-    required this.isDark,
-  });
+  String get _filterLabel {
+    switch (_filter) {
+      case TodoFilter.all:
+        return 'ALL TASKS · ${_todos.length}';
+      case TodoFilter.active:
+        return 'ACTIVE · $_activeCount';
+      case TodoFilter.completed:
+        return 'COMPLETED · $_completedCount';
+    }
+  }
 
-  final String greeting;
-  final int activeCount;
-  final int completedCount;
-  final int totalCount;
-  final double progress;
-  final bool showClear;
-  final VoidCallback onClear;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top;
-    final colors = isDark
-        ? const [Color(0xFF2A2F6B), Color(0xFF1A1D3A)]
-        : const [Color(0xFF5B6CFF), Color(0xFF8B5CF6)];
+  Widget _buildHeroHeader(ColorScheme colorScheme) {
+    final percent = (_progress * 100).round();
 
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(24, top + 16, 24, 28),
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: colors,
-        ),
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(28),
+          colors: [
+            colorScheme.primary,
+            Color.lerp(colorScheme.primary, colorScheme.tertiary, 0.55)!,
+            colorScheme.tertiary,
+          ],
         ),
         boxShadow: [
           BoxShadow(
-            color: colors.first.withValues(alpha: 0.35),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: colorScheme.primary.withValues(alpha: 0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -396,104 +460,120 @@ class _HeaderBanner extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      greeting,
+                      _todayLabel,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: 14,
+                        color: colorScheme.onPrimary.withValues(alpha: 0.85),
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        letterSpacing: 0.3,
+                        letterSpacing: 0.2,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'My Todos',
+                    const SizedBox(height: 6),
+                    Text(
+                      _greeting,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: colorScheme.onPrimary,
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _todos.isEmpty
+                          ? 'Ready when you are'
+                          : _activeCount == 0
+                              ? 'All caught up — nice work!'
+                              : '$_activeCount task${_activeCount == 1 ? '' : 's'} left today',
+                      style: TextStyle(
+                        color: colorScheme.onPrimary.withValues(alpha: 0.9),
+                        fontSize: 14,
+                        height: 1.35,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (showClear)
-                Material(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(12),
-                  child: IconButton(
-                    tooltip: 'Clear completed',
-                    onPressed: onClear,
-                    icon: const Icon(
-                      Icons.cleaning_services_outlined,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+              _ProgressRing(
+                progress: _progress,
+                label: _todos.isEmpty ? '—' : '$percent%',
+                color: colorScheme.onPrimary,
+              ),
             ],
           ),
-          const SizedBox(height: 22),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: isDark ? 0.08 : 0.15),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-              ),
-            ),
-            child: Row(
+          if (_todos.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Row(
               children: [
-                _ProgressRing(progress: progress, label: '$completedCount'),
-                const SizedBox(width: 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        activeCount == 0
-                            ? 'All caught up!'
-                            : '$activeCount active task${activeCount == 1 ? '' : 's'}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$completedCount completed · $totalCount total',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.8),
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 5,
-                          backgroundColor:
-                              Colors.white.withValues(alpha: 0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
+                  child: _StatPill(
+                    icon: Icons.pending_actions_rounded,
+                    label: 'Active',
+                    value: '$_activeCount',
+                    onPrimary: colorScheme.onPrimary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _StatPill(
+                    icon: Icons.task_alt_rounded,
+                    label: 'Done',
+                    value: '$_completedCount',
+                    onPrimary: colorScheme.onPrimary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _StatPill(
+                    icon: Icons.list_alt_rounded,
+                    label: 'Total',
+                    value: '${_todos.length}',
+                    onPrimary: colorScheme.onPrimary,
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildFilterBar(ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            _FilterChip(
+              label: 'All',
+              selected: _filter == TodoFilter.all,
+              onTap: () => setState(() => _filter = TodoFilter.all),
+            ),
+            _FilterChip(
+              label: 'Active',
+              selected: _filter == TodoFilter.active,
+              onTap: () => setState(() => _filter = TodoFilter.active),
+            ),
+            _FilterChip(
+              label: 'Done',
+              selected: _filter == TodoFilter.completed,
+              onTap: () => setState(() => _filter = TodoFilter.completed),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -503,34 +583,36 @@ class _ProgressRing extends StatelessWidget {
   const _ProgressRing({
     required this.progress,
     required this.label,
+    required this.color,
   });
 
   final double progress;
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 56,
-      height: 56,
+      width: 72,
+      height: 72,
       child: Stack(
         alignment: Alignment.center,
         children: [
           SizedBox(
-            width: 56,
-            height: 56,
+            width: 72,
+            height: 72,
             child: CircularProgressIndicator(
               value: progress.clamp(0.0, 1.0),
-              strokeWidth: 5,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              strokeWidth: 6,
+              backgroundColor: color.withValues(alpha: 0.22),
+              valueColor: AlwaysStoppedAnimation(color),
               strokeCap: StrokeCap.round,
             ),
           ),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: color,
               fontWeight: FontWeight.w800,
               fontSize: 15,
             ),
@@ -541,94 +623,108 @@ class _ProgressRing extends StatelessWidget {
   }
 }
 
-class _FilterChips extends StatelessWidget {
-  const _FilterChips({
-    required this.filter,
-    required this.allCount,
-    required this.activeCount,
-    required this.completedCount,
-    required this.onChanged,
+class _StatPill extends StatelessWidget {
+  const _StatPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onPrimary,
   });
 
-  final TodoFilter filter;
-  final int allCount;
-  final int activeCount;
-  final int completedCount;
-  final ValueChanged<TodoFilter> onChanged;
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color onPrimary;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        color: onPrimary.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: onPrimary.withValues(alpha: 0.12)),
+      ),
+      child: Column(
         children: [
-          _chip(
-            context,
-            TodoFilter.all,
-            'All',
-            allCount,
-            Icons.list_alt_rounded,
+          Icon(icon, size: 18, color: onPrimary.withValues(alpha: 0.95)),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              color: onPrimary,
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
           ),
-          const SizedBox(width: 8),
-          _chip(
-            context,
-            TodoFilter.active,
-            'Active',
-            activeCount,
-            Icons.radio_button_unchecked_rounded,
-          ),
-          const SizedBox(width: 8),
-          _chip(
-            context,
-            TodoFilter.completed,
-            'Done',
-            completedCount,
-            Icons.check_circle_outline_rounded,
+          Text(
+            label,
+            style: TextStyle(
+              color: onPrimary.withValues(alpha: 0.8),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _chip(
-    BuildContext context,
-    TodoFilter value,
-    String label,
-    int count,
-    IconData icon,
-  ) {
-    final selected = filter == value;
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return FilterChip(
-      selected: selected,
-      showCheckmark: false,
-      avatar: Icon(
-        icon,
-        size: 18,
-        color: selected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          decoration: BoxDecoration(
+            color: selected ? colorScheme.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: colorScheme.primary.withValues(alpha: 0.28),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected
+                  ? colorScheme.onPrimary
+                  : colorScheme.onSurfaceVariant,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
+        ),
       ),
-      label: Text('$label · $count'),
-      labelStyle: TextStyle(
-        fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-        color: selected ? colorScheme.onPrimary : colorScheme.onSurface,
-      ),
-      selectedColor: colorScheme.primary,
-      backgroundColor: colorScheme.surface,
-      side: BorderSide(
-        color: selected
-            ? colorScheme.primary
-            : colorScheme.outlineVariant.withValues(alpha: 0.6),
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      onSelected: (_) => onChanged(value),
     );
   }
 }
 
-class _TodoTile extends StatelessWidget {
-  const _TodoTile({
+class _TodoCard extends StatelessWidget {
+  const _TodoCard({
     required this.todo,
     required this.onToggle,
     required this.onEdit,
@@ -642,66 +738,72 @@ class _TodoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Dismissible(
       key: ValueKey(todo.id),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 24),
+        padding: const EdgeInsets.only(right: 22),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              colorScheme.error.withValues(alpha: 0.7),
-              colorScheme.error,
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
+          color: colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(18),
         ),
-        child: const Icon(Icons.delete_rounded, color: Colors.white, size: 26),
+        child: Icon(
+          Icons.delete_outline_rounded,
+          color: colorScheme.onErrorContainer,
+        ),
       ),
-      onDismissed: (_) => onDelete(),
+      confirmDismiss: (_) async {
+        onDelete();
+        return false;
+      },
       child: Material(
-        color: todo.isDone
-            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.45)
-            : (isDark ? const Color(0xFF1A1D27) : Colors.white),
-        borderRadius: BorderRadius.circular(16),
-        elevation: todo.isDone ? 0 : 1,
-        shadowColor: Colors.black.withValues(alpha: 0.08),
+        color: isDark ? const Color(0xFF152033) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
         child: InkWell(
-          onTap: onToggle,
-          onLongPress: onEdit,
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          onTap: onEdit,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: todo.isDone
+                    ? colorScheme.primary.withValues(alpha: 0.25)
+                    : colorScheme.outlineVariant.withValues(alpha: 0.45),
+              ),
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: colorScheme.primary.withValues(alpha: 0.06),
+                        blurRadius: 14,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+            ),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: _CheckCircle(
-                    isDone: todo.isDone,
-                    onTap: onToggle,
-                  ),
-                ),
-                const SizedBox(width: 12),
+                _CheckCircle(isDone: todo.isDone, onTap: onToggle),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         todo.title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          decoration:
-                              todo.isDone ? TextDecoration.lineThrough : null,
-                          color: todo.isDone
-                              ? colorScheme.onSurface.withValues(alpha: 0.45)
-                              : colorScheme.onSurface,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              decoration: todo.isDone
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                              color: todo.isDone
+                                  ? colorScheme.onSurfaceVariant
+                                  : colorScheme.onSurface,
+                            ),
                       ),
                       if (todo.notes.isNotEmpty) ...[
                         const SizedBox(height: 4),
@@ -709,19 +811,18 @@ class _TodoTile extends StatelessWidget {
                           todo.notes,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onSurfaceVariant
-                                .withValues(alpha: todo.isDone ? 0.5 : 0.9),
-                            decoration: todo.isDone
-                                ? TextDecoration.lineThrough
-                                : null,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                                height: 1.35,
+                                decoration: todo.isDone
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
                         ),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(width: 4),
                 IconButton(
                   tooltip: 'Edit',
                   icon: Icon(
@@ -757,24 +858,25 @@ class _CheckCircle extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: 26,
-        height: 26,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        width: 28,
+        height: 28,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isDone ? colorScheme.primary : Colors.transparent,
           border: Border.all(
             color: isDone
                 ? colorScheme.primary
-                : colorScheme.outline.withValues(alpha: 0.7),
-            width: 2,
+                : colorScheme.outline.withValues(alpha: 0.65),
+            width: 2.2,
           ),
           boxShadow: isDone
               ? [
                   BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.35),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                    color: colorScheme.primary.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
                   ),
                 ]
               : null,
@@ -782,7 +884,7 @@ class _CheckCircle extends StatelessWidget {
         child: isDone
             ? Icon(
                 Icons.check_rounded,
-                size: 16,
+                size: 17,
                 color: colorScheme.onPrimary,
               )
             : null,
@@ -824,8 +926,8 @@ class _EmptyState extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 96,
-              height: 96,
+              width: 108,
+              height: 108,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: LinearGradient(
@@ -833,21 +935,28 @@ class _EmptyState extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: [
                     colorScheme.primaryContainer,
-                    colorScheme.secondaryContainer,
+                    colorScheme.tertiaryContainer,
                   ],
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.18),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Icon(
                 icon,
-                size: 44,
+                size: 48,
                 color: colorScheme.onPrimaryContainer,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
             ),
             const SizedBox(height: 8),
@@ -856,7 +965,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
+                    height: 1.45,
                   ),
             ),
           ],
