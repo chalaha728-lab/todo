@@ -145,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   maxLines: 3,
                   decoration: const InputDecoration(
                     labelText: 'Notes (optional)',
-                    hintText: 'Add a little more detail…',
+                    hintText: 'Add a little more detail...',
                     prefixIcon: Padding(
                       padding: EdgeInsets.only(bottom: 40),
                       child: Icon(Icons.notes_rounded),
@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Loading tasks…',
+                    'Loading tasks...',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -285,7 +285,8 @@ class _HomeScreenState extends State<HomeScreen> {
             )
           : CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(
+                Sli
+verToBoxAdapter(
                   child: _HeaderBanner(
                     greeting: _greeting,
                     activeCount: _activeCount,
@@ -315,9 +316,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _EmptyState(filter: _filter),
                   )
                 else
-                  sliverPadding: null,
-                if (visible.isNotEmpty)
-                  SliverPadding(
+                  Sli
+verPadding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                     sliver: SliverList.separated(
                       itemCount: visible.length,
