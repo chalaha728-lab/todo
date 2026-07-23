@@ -7,8 +7,10 @@ A simple Flutter todo app for Android.
 - Add, edit, and delete tasks
 - Mark tasks complete / incomplete
 - Optional notes per task
+- **Task priorities** — Low / Medium / High with color-coded badges
+- Tasks are auto-sorted: incomplete first, then by priority, then by recency
 - Filter: All, Active, Done
-- Clear completed tasks
+- Clear completed tasks (with undo)
 - Swipe to delete with undo
 - Local persistence (survives app restarts)
 - Light & dark themes
